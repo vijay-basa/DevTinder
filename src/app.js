@@ -1,6 +1,8 @@
 const express = require("express");
 const { connectDB } = require("./config/database.js");
 const User = require('./models/user.js');
+const { validateSignUpData, validateLoginData } = require("./utils/validations.js");
+const bcrypt = require("bcrypt");
 
 const app = express();
 app.use(express.json());
@@ -36,28 +38,48 @@ app.get("/user", async (req, res) => {
 // Signup POST API - signup new user in DB
 app.post('/signup', async (req, res) => {
   try {
-    const data = req.body;
-    const ALLOWED_CREATE = [
-      "firstName", "lastName", "emailId", "password", "age", "gender", "photoUrl", "about", "skills"
-    ];
-    const isAllowedCreate = Object.keys(data).every(k => ALLOWED_CREATE.includes(k));
+    // Validate the data
+    validateSignUpData(req);
 
-    if(!isAllowedCreate) {
-      throw new Error("data is not allowed");
-    }
+    // Encrypt the password
+    const { firstName, lastName, emailId, password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    if(data?.skills?.length > 10){
-      throw new Error("more than 10 skills are not allowed!");
-    }
-
-    const user = new User(req.body);
+    const user = new User({
+      firstName, 
+      lastName, 
+      emailId, 
+      password: hashedPassword,
+    });
     await user.save();
     res.send("User Added Successfully!");
   } catch (err) {
-    res.status(500).send("Error saving the user " + err.message)
+    res.status(500).send("ERROR : " + err.message)
   }
 
 });
+
+// Login POST API - login user
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    validateLoginData(email, password);
+
+    const user = await User.findOne({ emailId: email });
+    if(!user) {
+      throw new Error("Invalid credential!");
+    }
+
+    const isValidUser = await bcrypt.compare(password, user.password);
+    if(!isValidUser) {
+      throw new Error("Invalid credentials");
+    }
+    res.send("Login successfully!");
+
+  } catch(err) {
+    res.status(400).send("ERROR : " + err.message);
+  }
+})
 
 // User PATCH API - update user by Id or emailId in DB
 app.patch("/user/:userId", async (req, res) => {
