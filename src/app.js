@@ -35,10 +35,22 @@ app.get("/user", async (req, res) => {
 
 // Signup POST API - signup new user in DB
 app.post('/signup', async (req, res) => {
-
-  const user = new User(req.body);
-
   try {
+    const data = req.body;
+    const ALLOWED_CREATE = [
+      "firstName", "lastName", "emailId", "password", "age", "gender", "photoUrl", "about", "skills"
+    ];
+    const isAllowedCreate = Object.keys(data).every(k => ALLOWED_CREATE.includes(k));
+
+    if(!isAllowedCreate) {
+      throw new Error("data is not allowed");
+    }
+
+    if(data?.skills?.length > 10){
+      throw new Error("more than 10 skills are not allowed!");
+    }
+
+    const user = new User(req.body);
     await user.save();
     res.send("User Added Successfully!");
   } catch (err) {
@@ -48,10 +60,25 @@ app.post('/signup', async (req, res) => {
 });
 
 // User PATCH API - update user by Id or emailId in DB
-app.patch("/user", async (req, res) => {
+app.patch("/user/:userId", async (req, res) => {
   try {
     const data = req.body;
-    const userId = req.body.userId;
+    const userId = req.params?.userId;
+
+    const ALLOWED_UPDATES = [
+      "firstName", "lastName", "password", "age", "gender", "photoUrl", "about", "skills"
+    ]
+
+    const isAllowedUpdate = Object.keys(data).every(k => ALLOWED_UPDATES.includes(k));
+
+    if(!isAllowedUpdate) {
+      throw new Error("data is not allowed to update");
+    }
+
+    if(data?.skills?.length > 10) {
+      throw new Error("more than 10 skills are not allowed")
+    }
+
     await User.findByIdAndUpdate(userId, data, { runValidators: true });
     // const updateUser = await User.findByIdAndUpdate({ _id: userId }, data, { returnDocument: 'after', runValidators: true });
 
