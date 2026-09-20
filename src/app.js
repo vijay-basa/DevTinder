@@ -3,10 +3,12 @@ const { connectDB } = require("./config/database.js");
 const User = require('./models/user.js');
 const { validateSignUpData, validateLoginData } = require("./utils/validations.js");
 const bcrypt = require("bcrypt");
+const cookieParser = require("cookie-parser");
+const JWT = require("jsonwebtoken");
 
 const app = express();
 app.use(express.json());
-
+app.use(cookieParser());
 
 // Feed GET API - get all the users from DB
 app.get("/feed", async (req, res) => {
@@ -74,10 +76,34 @@ app.post("/login", async (req, res) => {
     if(!isValidUser) {
       throw new Error("Invalid credentials");
     }
-    res.send("Login successfully!");
 
+    const token = await JWT.sign({ _id: user._id }, "$DevTinder&SECRET");
+
+    res.cookie("token", token);
+    res.send("Login successfully!");
   } catch(err) {
     res.status(400).send("ERROR : " + err.message);
+  }
+})
+
+// User GET API - get profile details
+app.get("/profile", async (req, res) => {
+  try {
+    const { token } = req.cookies;
+
+    if(!token) {
+      throw new Error("Token is invalid!!");
+    }
+
+    const decodedMessage = await JWT.verify(token, "$DevTinder&SECRET");
+
+    const user = await User.findById(decodedMessage?._id);
+    if(!user) {
+      throw new Error("User not found!!");
+    }
+    res.send(user);
+  } catch(err) {
+    res.status(400).send("Error : " + err.message);
   }
 })
 
