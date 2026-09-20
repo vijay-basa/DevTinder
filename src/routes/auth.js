@@ -13,9 +13,9 @@ authRouter.post('/signup', async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = new User({
-      firstName, 
-      lastName, 
-      emailId, 
+      firstName,
+      lastName,
+      emailId,
       password: hashedPassword,
     });
     await user.save();
@@ -32,12 +32,12 @@ authRouter.post("/login", async (req, res) => {
     validateLoginData(email, password);
 
     const user = await User.findOne({ emailId: email });
-    if(!user) {
+    if (!user) {
       throw new Error("Invalid credential!");
     }
 
     const isValidUser = await user.validatePassword(password);
-    if(!isValidUser) {
+    if (!isValidUser) {
       throw new Error("Invalid credentials");
     }
 
@@ -45,9 +45,13 @@ authRouter.post("/login", async (req, res) => {
 
     res.cookie("token", token);
     res.send("Login successfully!");
-  } catch(err) {
+  } catch (err) {
     res.status(400).send("ERROR : " + err.message);
   }
+})
+
+authRouter.post("/logout", (req, res) => {
+  res.clearCookie("token").send("Logout successful");
 })
 
 module.exports = authRouter;
